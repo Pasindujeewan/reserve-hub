@@ -1,39 +1,10 @@
 import Link from "next/link";
+import { SiteHeader } from "./ui";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      {/* Navbar */}
-      <nav className="border-b border-slate-200">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link href="/" className="text-2xl font-bold">
-            Reserve<span className="text-blue-600">Hub</span>
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <Link
-              href="/resources"
-              className="hidden text-sm text-slate-600 hover:text-blue-600 sm:block"
-            >
-              Resources
-            </Link>
-
-            <Link
-              href="/login"
-              className="text-sm font-medium hover:text-blue-600"
-            >
-              Login
-            </Link>
-
-            <Link
-              href="/register"
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Register
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <SiteHeader />
 
       {/* Hero */}
       <section className="bg-slate-50">
@@ -54,17 +25,17 @@ export default function HomePage() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/resources"
+                href="/browse"
                 className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
               >
-                View Resources
+                Browse resources
               </Link>
 
               <Link
                 href="/register"
                 className="rounded-lg border border-slate-300 bg-white px-6 py-3 font-semibold hover:bg-slate-100"
               >
-                Create Account
+                Create account
               </Link>
             </div>
           </div>
@@ -116,7 +87,7 @@ export default function HomePage() {
 
       {/* Main features */}
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="text-3xl font-bold">Everything in one place</h2>
+          <h2 className="text-3xl font-bold">Simple resource booking</h2>
 
         <p className="mt-3 max-w-2xl leading-7 text-slate-600">
           Reserve Hub helps keep resource information and reservations
@@ -141,9 +112,14 @@ export default function HomePage() {
           <div className="rounded-xl border border-slate-200 p-6">
             <h3 className="text-lg font-bold">Reservations</h3>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Create, view, and manage your reservations.
+              Review your booking details and cancel when needed.
             </p>
           </div>
+
+          <Link href="/resources" className="rounded-xl border border-slate-200 p-6 transition hover:border-blue-300 hover:bg-blue-50">
+            <h3 className="text-lg font-bold">Resource management</h3>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Manage the resource list and availability.</p>
+          </Link>
         </div>
       </section>
 
