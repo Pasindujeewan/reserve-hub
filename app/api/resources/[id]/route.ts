@@ -1,10 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { updateResourceSchema } from "@/lib/resource-schema";
 import {
   deactivateResource,
   getResourceById,
   updateResource,
 } from "@/lib/resource-service";
+import { getSessionUserId } from "@/lib/session";
+
+function authenticationRequired() {
+  return NextResponse.json(
+    { success: false, message: "Authentication required" },
+    { status: 401 },
+  );
+}
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -21,7 +29,8 @@ async function parseResourceId(context: RouteContext) {
   return resourceId;
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: NextRequest, context: RouteContext) {
+  if ((await getSessionUserId(request)) === null) return authenticationRequired();
   const resourceId = await parseResourceId(context);
 
   if (resourceId === null) {
@@ -53,7 +62,8 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 }
 
-export async function PATCH(request: Request, context: RouteContext) {
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  if ((await getSessionUserId(request)) === null) return authenticationRequired();
   const resourceId = await parseResourceId(context);
 
   if (resourceId === null) {
@@ -125,7 +135,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  if ((await getSessionUserId(request)) === null) return authenticationRequired();
   const resourceId = await parseResourceId(context);
 
   if (resourceId === null) {

@@ -15,7 +15,8 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || "Unable to sign in");
-      window.location.assign("/browse");
+      const next = new URLSearchParams(window.location.search).get("next");
+      window.location.assign(next?.startsWith("/") && !next.startsWith("//") ? next : "/resources");
     } catch (err) { setError(err instanceof Error ? err.message : "Unable to sign in"); }
     finally { setBusy(false); }
   }

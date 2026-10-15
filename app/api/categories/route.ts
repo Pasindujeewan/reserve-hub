@@ -1,10 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { createCategorySchema } from "@/lib/category-schema";
 import { createCategory, getCategories } from "@/lib/category-service";
+import { getSessionUserId } from "@/lib/session";
+
+function authenticationRequired() {
+  return NextResponse.json(
+    { success: false, message: "Authentication required" },
+    { status: 401 },
+  );
+}
 
 // GET /api/categories - Fetch all categories
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if ((await getSessionUserId(request)) === null) return authenticationRequired();
   try {
     const categories = await getCategories();
 
@@ -21,7 +30,8 @@ export async function GET() {
 }
 
 // POST /api/categories - Create a new category
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if ((await getSessionUserId(request)) === null) return authenticationRequired();
   let body: unknown;
 
   try {

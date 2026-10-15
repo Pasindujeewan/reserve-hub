@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SiteHeader } from "../ui";
 
 type Reservation = {
   reservationId: number;
+  quantity: number;
   startTime: string;
   endTime: string;
   status: string;
@@ -16,8 +17,8 @@ export default function ReservationsPage() {
   const [items, setItems] = useState<Reservation[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  async function load() {
-    setLoading(true);
+
+  const load = useCallback(async () => {
     try {
       const response = await fetch("/api/reservations");
       const result = await response.json();
@@ -32,10 +33,15 @@ export default function ReservationsPage() {
     } finally {
       setLoading(false);
     }
-  }
-  useEffect(() => {
-    void load();
   }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
   async function cancel(id: number) {
     setError("");
     try {
@@ -77,7 +83,7 @@ export default function ReservationsPage() {
             </p>
           </div>
           <Link
-            href="/browse"
+            href="/resources"
             className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white"
           >
             Find a resource
@@ -122,6 +128,9 @@ export default function ReservationsPage() {
                     </p>
                     <p className="mt-2 text-sm text-slate-700">
                       {date(item.startTime)} – {date(item.endTime)}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {item.quantity} {item.quantity === 1 ? "unit" : "units"} reserved
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

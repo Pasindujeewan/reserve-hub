@@ -33,8 +33,7 @@ export function SiteHeader() {
           Reserve<span className="text-blue-600">Hub</span>
         </Link>
         <div className="order-3 flex w-full flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-sm font-medium text-slate-600 sm:order-none sm:w-auto sm:border-0 sm:pt-0">
-          <Link href="/browse" className="transition-colors hover:text-blue-700">Browse</Link>
-          <Link href="/resources" className="transition-colors hover:text-blue-700">Resources</Link>
+          <Link href="/resources" className="transition-colors hover:text-blue-700">Browse resources</Link>
           <Link href="/reservations" className="transition-colors hover:text-blue-700">My reservations</Link>
         </div>
         <div className="ml-auto flex min-w-0 items-center gap-3 text-sm sm:ml-0">

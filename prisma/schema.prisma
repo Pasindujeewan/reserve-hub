@@ -20,6 +20,7 @@ model Reservation {
   reservationId Int      @id @default(autoincrement())
   userId        Int
   resourceId    Int
+  quantity      Int      @default(1)
   startTime     DateTime @db.Timestamp(6)
   endTime       DateTime @db.Timestamp(6)
   status        String   @default("PENDING") @db.VarChar(20)

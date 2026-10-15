@@ -25,7 +25,7 @@ export default function HomePage() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/browse"
+                href="/resources"
                 className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
               >
                 Browse resources
@@ -87,7 +87,7 @@ export default function HomePage() {
 
       {/* Main features */}
       <section className="mx-auto max-w-6xl px-6 py-20">
-          <h2 className="text-3xl font-bold">Simple resource booking</h2>
+        <h2 className="text-3xl font-bold">Simple resource booking</h2>
 
         <p className="mt-3 max-w-2xl leading-7 text-slate-600">
           Reserve Hub helps keep resource information and reservations
@@ -116,9 +116,14 @@ export default function HomePage() {
             </p>
           </div>
 
-          <Link href="/resources" className="rounded-xl border border-slate-200 p-6 transition hover:border-blue-300 hover:bg-blue-50">
+          <Link
+            href="/resources"
+            className="rounded-xl border border-slate-200 p-6 transition hover:border-blue-300 hover:bg-blue-50"
+          >
             <h3 className="text-lg font-bold">Resource management</h3>
-            <p className="mt-3 text-sm leading-6 text-slate-600">Manage the resource list and availability.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Manage the resource list and availability.
+            </p>
           </Link>
         </div>
       </section>
@@ -134,9 +139,7 @@ export default function HomePage() {
             Resource reservation and management.
           </p>
 
-          <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} Reserve Hub
-          </p>
+          <p className="text-sm text-slate-500">© 2026 Reserve Hub</p>
         </div>
       </footer>
     </main>

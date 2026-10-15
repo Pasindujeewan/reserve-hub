@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
           message: "Resource is not available",
           status: 409,
         },
-        RESERVATION_CONFLICT: {
-          message: "Resource is already reserved during this time",
+        RESERVATION_CAPACITY_EXCEEDED: {
+          message: "Not enough units are available for that time. Choose fewer units or another time.",
           status: 409,
         },
       };

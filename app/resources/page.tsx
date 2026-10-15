@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { SiteHeader } from "../ui";
 
 type ResourceStatus = "AVAILABLE" | "MAINTENANCE" | "INACTIVE";
 
@@ -20,6 +21,8 @@ type Category = {
   categoryId: number;
   categoryName: string;
 };
+
+type ReservedPeriod = { startTime: string; endTime: string; status: string; quantity: number };
 
 type ResourceForm = {
   name: string;
@@ -54,6 +57,15 @@ export default function ResourcesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [reservedPeriods, setReservedPeriods] = useState<ReservedPeriod[]>([]);
+  const [periodsLoading, setPeriodsLoading] = useState(false);
+  const [reservationError, setReservationError] = useState("");
+  const [reservationBusy, setReservationBusy] = useState(false);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [quantity, setQuantity] = useState("1");
 
   useEffect(() => {
     async function loadCategories() {
@@ -121,6 +133,7 @@ export default function ResourcesPage() {
     setForm(emptyForm);
     setEditingId(null);
     setError("");
+    setFormOpen(false);
   }
 
   function editResource(resource: Resource) {
@@ -137,7 +150,7 @@ export default function ResourcesPage() {
 
     setError("");
     setMessage("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setFormOpen(true);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -213,32 +226,106 @@ export default function ResourcesPage() {
     }
   }
 
+  async function showResource(resource: Resource) {
+    setSelectedResource(resource);
+    setReservedPeriods([]);
+    setReservationError("");
+    setStartTime("");
+    setEndTime("");
+    setQuantity("1");
+    setPeriodsLoading(true);
+    try {
+      const response = await fetch(`/api/resources/${resource.resourceId}/availability`);
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Unable to load reserved periods");
+      }
+      setReservedPeriods(result.data as ReservedPeriod[]);
+    } catch (err) {
+      setReservationError(err instanceof Error ? err.message : "Unable to load reserved periods");
+    } finally {
+      setPeriodsLoading(false);
+    }
+  }
+
+  async function reserveResource(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedResource) return;
+    setReservationBusy(true);
+    setReservationError("");
+    try {
+      const response = await fetch("/api/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resourceId: selectedResource.resourceId,
+          quantity: Number(quantity),
+          startTime: new Date(startTime).toISOString(),
+          endTime: new Date(endTime).toISOString(),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Unable to reserve resource");
+      }
+      setMessage("Reservation submitted successfully.");
+      setSelectedResource(null);
+      window.location.assign("/reservations");
+    } catch (err) {
+      setReservationError(err instanceof Error ? err.message : "Unable to reserve resource");
+    } finally {
+      setReservationBusy(false);
+    }
+  }
+
+  function formatPeriod(value: string) {
+    return new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  }
+
+  const requestedAvailableCapacity = (() => {
+    if (!selectedResource || !startTime || !endTime) return null;
+    const requestedStart = new Date(startTime).getTime();
+    const requestedEnd = new Date(endTime).getTime();
+    if (!Number.isFinite(requestedStart) || requestedEnd <= requestedStart) return null;
+
+    const events = reservedPeriods
+      .filter((period) => new Date(period.startTime).getTime() < requestedEnd && new Date(period.endTime).getTime() > requestedStart)
+      .flatMap((period) => [
+        { time: Math.max(requestedStart, new Date(period.startTime).getTime()), change: period.quantity },
+        { time: Math.min(requestedEnd, new Date(period.endTime).getTime()), change: -period.quantity },
+      ])
+      .sort((a, b) => a.time - b.time || a.change - b.change);
+
+    let inUse = 0;
+    let peakInUse = 0;
+    for (const event of events) {
+      inUse += event.change;
+      peakInUse = Math.max(peakInUse, inUse);
+    }
+    return Math.max(0, selectedResource.capacity - peakInUse);
+  })();
+
   const inputClass =
     "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 text-gray-900 sm:px-8">
+    <><SiteHeader /><main className="min-h-screen bg-gray-50 px-4 py-8 text-gray-900 sm:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 hover:underline"
-        >
-          <span aria-hidden="true">←</span> Back to home
-        </Link>
         <header>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-blue-600">
-                RESOURCE MANAGEMENT
+                BROWSE & MANAGE RESOURCES
               </p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight">Resources</h1>
               <p className="mt-2 text-sm text-gray-500">
-                Create, manage, and monitor your resources.
+                Find a resource, review its details and reserved times, or manage the resource list.
               </p>
             </div>
-            <a href="/categories" className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              Manage categories
-            </a>
+            <div className="flex gap-3">
+              <Link href="/categories" className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Manage categories</Link>
+              <button type="button" onClick={() => { resetForm(); setFormOpen(true); }} className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800">Add resource</button>
+            </div>
           </div>
         </header>
 
@@ -254,10 +341,10 @@ export default function ResourcesPage() {
           </div>
         )}
 
-        <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">
+        {formOpen && <div className="fixed inset-0 z-20 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4" role="presentation"><section role="dialog" aria-modal="true" aria-labelledby="resource-form-title" className="my-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          <div className="flex items-start justify-between gap-4"><div><h2 id="resource-form-title" className="text-lg font-semibold">
             {editingId !== null ? "Edit resource" : "Create resource"}
-          </h2>
+          </h2><p className="mt-1 text-sm text-gray-500">Enter the resource information below.</p></div><button type="button" aria-label="Close" onClick={resetForm} className="text-2xl leading-none text-gray-400 hover:text-gray-700">×</button></div>
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -398,12 +485,12 @@ export default function ResourcesPage() {
               )}
             </div>
           </form>
-        </section>
+        </section></div>}
 
         <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <h2 className="text-lg font-semibold">All resources</h2>
+              <h2 className="text-lg font-semibold">Resources</h2>
               <p className="mt-1 text-sm text-gray-500">
                 {resources.length} resource(s) found
               </p>
@@ -430,94 +517,9 @@ export default function ResourcesPage() {
             </div>
           </div>
 
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[750px] text-left text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50 text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Resource</th>
-                  <th className="px-4 py-3 font-medium">Type</th>
-                  <th className="px-4 py-3 font-medium">Location</th>
-                  <th className="px-4 py-3 font-medium">Capacity</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-10 text-center text-gray-500"
-                    >
-                      Loading resources...
-                    </td>
-                  </tr>
-                ) : resources.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-10 text-center text-gray-500"
-                    >
-                      No resources found.
-                    </td>
-                  </tr>
-                ) : (
-                  resources.map((resource) => (
-                    <tr key={resource.resourceId} className="hover:bg-gray-50">
-                      <td className="px-4 py-4">
-                        <p className="font-medium">{resource.name}</p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          ID: {resource.resourceId}
-                        </p>
-                      </td>
-                      <td className="px-4 py-4">{resource.resourceType}</td>
-                      <td className="px-4 py-4">{resource.location}</td>
-                      <td className="px-4 py-4">{resource.capacity}</td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                            resource.status === "AVAILABLE"
-                              ? "bg-green-100 text-green-700"
-                              : resource.status === "MAINTENANCE"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {resource.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            onClick={() => editResource(resource)}
-                            className="font-medium text-blue-600 hover:underline"
-                          >
-                            Edit
-                          </button>
-
-                          {resource.status !== "INACTIVE" && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                deactivateResource(resource.resourceId)
-                              }
-                              className="font-medium text-red-600 hover:underline"
-                            >
-                              Deactivate
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {loading ? <p className="mt-5 p-10 text-center text-gray-500">Loading resources...</p> : resources.length === 0 ? <p className="mt-5 p-10 text-center text-gray-500">No resources found.</p> : <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{resources.map((resource) => <article key={resource.resourceId} className="rounded-xl border border-gray-200 bg-white p-5 transition hover:border-blue-300 hover:shadow-sm"><button type="button" onClick={() => void showResource(resource)} className="block w-full text-left"><div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-semibold text-gray-900">{resource.name}</h3><p className="mt-1 text-sm text-gray-500">{resource.resourceType}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${resource.status === "AVAILABLE" ? "bg-green-100 text-green-700" : resource.status === "MAINTENANCE" ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"}`}>{resource.status}</span></div><p className="mt-4 line-clamp-2 text-sm text-gray-600">{resource.description || "No description provided."}</p><p className="mt-3 text-sm text-gray-500">{resource.location} · Capacity {resource.capacity}</p><span className="mt-4 inline-block text-sm font-semibold text-blue-700">View details & reserve →</span></button><div className="mt-4 flex gap-4 border-t border-gray-100 pt-3"><button type="button" onClick={() => editResource(resource)} className="text-sm font-medium text-blue-700 hover:underline">Edit</button>{resource.status !== "INACTIVE" && <button type="button" onClick={() => void deactivateResource(resource.resourceId)} className="text-sm font-medium text-red-700 hover:underline">Deactivate</button>}</div></article>)}</div>}
         </section>
       </div>
-    </main>
+    {selectedResource && <div className="fixed inset-0 z-30 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4" role="presentation"><section role="dialog" aria-modal="true" aria-labelledby="resource-details-title" className="my-auto max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wide text-blue-700">Resource details</p><h2 id="resource-details-title" className="mt-1 text-2xl font-bold">{selectedResource.name}</h2></div><button type="button" aria-label="Close" onClick={() => setSelectedResource(null)} className="text-2xl leading-none text-gray-400">×</button></div><p className="mt-4 text-gray-600">{selectedResource.description || "No description provided."}</p><dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-gray-50 p-4 text-sm"><div><dt className="text-gray-500">Type</dt><dd className="mt-1 font-medium">{selectedResource.resourceType}</dd></div><div><dt className="text-gray-500">Location</dt><dd className="mt-1 font-medium">{selectedResource.location}</dd></div><div><dt className="text-gray-500">Capacity</dt><dd className="mt-1 font-medium">{selectedResource.capacity}</dd></div><div><dt className="text-gray-500">Status</dt><dd className="mt-1 font-medium">{selectedResource.status}</dd></div></dl><h3 className="mt-6 font-semibold">Already reserved</h3>{periodsLoading ? <p className="mt-2 text-sm text-gray-500">Loading reserved periods...</p> : reservedPeriods.length === 0 ? <p className="mt-2 text-sm text-gray-500">No upcoming reservations.</p> : <ul className="mt-2 max-h-36 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 text-sm">{reservedPeriods.map((period, index) => <li key={`${period.startTime}-${index}`} className="flex flex-wrap justify-between gap-2"><span>{formatPeriod(period.startTime)} – {formatPeriod(period.endTime)}</span><span className="text-gray-500">{period.quantity} {period.quantity === 1 ? "unit" : "units"} · {period.status}</span></li>)}</ul>}{reservationError && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{reservationError}</p>}<form onSubmit={reserveResource} className="mt-6 space-y-4 border-t border-gray-200 pt-5"><h3 className="font-semibold">Reserve this resource</h3><p className="text-sm text-gray-500">Total capacity: {selectedResource.capacity} units.</p>{requestedAvailableCapacity !== null && <p className="text-sm font-medium text-blue-700">Available for selected time: {requestedAvailableCapacity} units</p>}<div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-medium">Starts<input className={inputClass} type="datetime-local" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label><label className="text-sm font-medium">Ends<input className={inputClass} type="datetime-local" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label><label className="text-sm font-medium">Required capacity (units)<input className={inputClass} type="number" min="1" max={requestedAvailableCapacity ?? selectedResource.capacity} step="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></label></div>{requestedAvailableCapacity !== null && Number(quantity) > requestedAvailableCapacity && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">Only {requestedAvailableCapacity} {requestedAvailableCapacity === 1 ? "unit is" : "units are"} available for this time. Choose fewer units or another time.</p>}<button type="submit" disabled={reservationBusy || periodsLoading || selectedResource.status !== "AVAILABLE" || (requestedAvailableCapacity !== null && Number(quantity) > requestedAvailableCapacity)} className="w-full rounded-lg bg-blue-700 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50">{reservationBusy ? "Checking capacity..." : selectedResource.status === "AVAILABLE" ? "Reserve units" : "Resource unavailable"}</button></form></section></div>}</main></>
   );
 }
