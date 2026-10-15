@@ -38,7 +38,7 @@ ReserveHub is a resource booking app for organizations. Users can browse shared 
 
 2. Create a PostgreSQL database. The examples below use the database name `reservehub`.
 
-3. Create a `.env` file in the repository root:
+3. Copy `.env.example` to `.env` in the repository root, then set your local PostgreSQL credentials and a private authentication secret:
 
    ```env
    DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/reservehub?schema=public"
