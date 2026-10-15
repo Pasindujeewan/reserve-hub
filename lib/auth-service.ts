@@ -24,7 +24,7 @@ export async function registerUser(data: RegisterInput) {
         fullName: data.fullName,
         email: data.email,
         passwordHash,
-        role: "USER",
+        role: data.role,
       },
       select: {
         userId: true,

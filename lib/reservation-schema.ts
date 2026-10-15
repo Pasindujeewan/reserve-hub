@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createReservationSchema = z
   .object({
     resourceId: z.number().int().positive(),
+    quantity: z.number().int().positive("Required capacity must be at least 1"),
     startTime: z.iso.datetime(),
     endTime: z.iso.datetime(),
   })

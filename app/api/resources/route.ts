@@ -1,11 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   createResourceSchema,
   resourceStatusSchema,
 } from "@/lib/resource-schema";
 import { createResource, getResources } from "@/lib/resource-service";
+import { getSessionUserId } from "@/lib/session";
 
-export async function GET(request: Request) {
+function authenticationRequired() {
+  return NextResponse.json(
+    { success: false, message: "Authentication required" },
+    { status: 401 },
+  );
+}
+
+export async function GET(request: NextRequest) {
+  if ((await getSessionUserId(request)) === null) return authenticationRequired();
   try {
     const { searchParams } = new URL(request.url);
 
@@ -68,7 +77,8 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if ((await getSessionUserId(request)) === null) return authenticationRequired();
   let body: unknown;
 
   try {

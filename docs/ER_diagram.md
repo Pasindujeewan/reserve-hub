@@ -15,4 +15,4 @@ The Entity-Relationship (ER) diagram represents the structure of the ReserveHub 
 
 ### ER Diagram
 
-![ReserveHub ER Diagram](./er-diagram.png.png)
+![ReserveHub ER Diagram](./er-diagram.png)

@@ -44,6 +44,7 @@ export async function createReservation(
         select: {
           resourceId: true,
           status: true,
+          capacity: true,
         },
       });
 
@@ -55,24 +56,49 @@ export async function createReservation(
         throw new Error("RESOURCE_UNAVAILABLE");
       }
 
-      const overlappingReservation = await tx.reservation.findFirst({
+      if (data.quantity > resource.capacity) {
+        throw new Error("RESERVATION_CAPACITY_EXCEEDED");
+      }
+
+      const overlappingReservations = await tx.reservation.findMany({
         where: {
           resourceId: data.resourceId,
           status: { in: ["PENDING", "CONFIRMED"] },
           startTime: { lt: endTime },
           endTime: { gt: startTime },
         },
-        select: { reservationId: true },
+        select: { startTime: true, endTime: true, quantity: true },
       });
 
-      if (overlappingReservation) {
-        throw new Error("RESERVATION_CONFLICT");
+      const events = overlappingReservations
+        .flatMap((reservation) => [
+          {
+            time: Math.max(startTime.getTime(), reservation.startTime.getTime()),
+            change: reservation.quantity,
+          },
+          {
+            time: Math.min(endTime.getTime(), reservation.endTime.getTime()),
+            change: -reservation.quantity,
+          },
+        ])
+        .sort((a, b) => a.time - b.time || a.change - b.change);
+
+      let reservedQuantity = 0;
+      let peakReservedQuantity = 0;
+      for (const event of events) {
+        reservedQuantity += event.change;
+        peakReservedQuantity = Math.max(peakReservedQuantity, reservedQuantity);
+      }
+
+      if (peakReservedQuantity + data.quantity > resource.capacity) {
+        throw new Error("RESERVATION_CAPACITY_EXCEEDED");
       }
 
       return tx.reservation.create({
         data: {
           userId,
           resourceId: data.resourceId,
+          quantity: data.quantity,
           startTime,
           endTime,
           status: "PENDING",
