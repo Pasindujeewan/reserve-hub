@@ -1,97 +1,114 @@
 # ReserveHub
 
-A resource reservation management system built with Next.js, TypeScript, and PostgreSQL. ReserveHub helps an organization manage shared resources, check availability, and create reservations while preventing overlapping bookings.
+ReserveHub is a resource booking app for organizations. Users can browse shared resources, check existing reservation times, and reserve available units for a time period. Signed-in users can also manage resources and categories.
 
 ## Features
 
-- Manage resources and their details.
-- View and search resources.
-- Create, view, and cancel reservations.
-- Check availability for a selected time period.
-- Prevent overlapping reservations for the same resource.
-- View a dashboard with resource and upcoming reservation summaries.
+- Register and sign in with a user account. Protected pages and API routes require an authenticated session.
+- Select an organization role during registration: Member, Manager, Coordinator, Staff, or Viewer.
+- Browse, search, and filter resources from the Resources page.
+- Add and edit resources in popup forms, and view resource details and upcoming reservations.
+- Set a resource's total capacity and request a number of units when reserving it.
+- See the units available for a selected time period. The server checks overlapping reservations before creating a booking.
+- View and cancel your reservations.
+- Create and manage resource categories.
 
-## Tech Stack
+## Technology
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- PostgreSQL
-- Prisma ORM
-- Zod
+- Next.js 16 App Router and React 19
+- TypeScript and Tailwind CSS
+- PostgreSQL and Prisma ORM
+- Zod validation
+- Argon2 password hashing and signed session cookies
 - pnpm
-
-## Getting Started
-
-### 1. Requirements
-
-Install the following before running the project:
-
-- Node.js (LTS version recommended)
-- pnpm
-- PostgreSQL
-
-### 2. Install dependencies
-
-Clone the repository and open its directory:
-
-```bash
-git clone <your-repository-url>
-cd reserve-hub
-pnpm install
-```
-
-### 3. Configure environment variables
-
-Create a `.env` file in the project root and add your PostgreSQL connection string:
-
-```env
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/reserve_hub"
-```
-
-Replace `USER` and `PASSWORD` with your PostgreSQL credentials. Make sure the `reserve_hub` database exists.
-
-Do not commit `.env` or any real credentials to GitHub.
-
-### 4. Set up the database
-
-After configuring Prisma and the database schema, run:
-
-```bash
-pnpm prisma migrate dev --name init
-pnpm prisma generate
-```
-
-### 5. Start the development server
-
-```bash
-pnpm dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Project Structure
-
-```text
-src/
-├── app/          # Pages, layouts, and API route handlers
-├── components/   # Reusable UI components
-├── lib/          # Database client, validation, and business logic
-└── types/        # Shared TypeScript types
-
-prisma/           # Database schema and migrations
-docs/             # Project documentation
-public/           # Static assets
-```
 
 ## Requirements
 
-See [`docs/requirements-specification.md`](docs/requirements-specification.md) for the project requirements.
+- Node.js
+- pnpm 11.5.2 (the version specified by `package.json`)
+- PostgreSQL
 
-## Project Status
+## Setup
 
-Currently in development.
+1. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+2. Create a PostgreSQL database. The examples below use the database name `reservehub`.
+
+3. Copy `.env.example` to `.env` in the repository root, then set your local PostgreSQL credentials and a private authentication secret:
+
+   ```env
+   DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/reservehub?schema=public"
+   AUTH_SECRET="replace-with-a-random-secret-at-least-32-characters-long"
+   ```
+
+   Replace the database username and password with your local PostgreSQL credentials. `AUTH_SECRET` must contain at least 32 characters. Keep `.env` private; it is excluded from Git.
+
+4. Apply the Prisma migrations and generate the Prisma client:
+
+   ```bash
+   pnpm exec prisma migrate deploy
+   pnpm exec prisma generate
+   ```
+
+   The migrations create the tables and add the reservation `quantity` field used to track reserved units.
+
+5. Start the development server:
+
+   ```bash
+   pnpm dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000). Register an account to start using the app; registration creates a session and opens the Resources page.
+
+## Common commands
+
+```bash
+pnpm dev                  # Start the development server
+pnpm lint                 # Run ESLint
+pnpm exec prisma generate # Regenerate the Prisma client
+pnpm exec prisma migrate deploy # Apply pending database migrations
+pnpm build                # Build the production app
+pnpm start                # Start the production app
+```
+
+## How unit capacity works
+
+- `Resource.capacity` is the total number of units available for that resource.
+- `Reservation.quantity` is the number of units requested by one reservation.
+- The app calculates remaining units for the selected dates from overlapping pending and confirmed reservations.
+- The server repeats the capacity check when the reservation is submitted. If there are not enough units, it returns an error and does not create the reservation.
+
+## Project layout
+
+```text
+app/                 Pages, shared UI, and API route handlers
+  api/               Authentication, resource, category, and reservation APIs
+  resources/         Resource browsing, management, details, and booking
+  reservations/      Current user's reservations
+lib/                 Validation schemas, services, Prisma client, and sessions
+prisma/              Database schema and migrations
+docs/                Requirements and data model documentation
+public/              Static assets
+```
+
+## API overview
+
+| Area | Routes |
+| --- | --- |
+| Authentication | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me` |
+| Resources | `/api/resources`, `/api/resources/[id]`, `/api/resources/[id]/availability` |
+| Categories | `/api/categories` |
+| Reservations | `/api/reservations`, `/api/reservations/[id]` |
+
+## Project documentation
+
+- [Requirements](docs/ReserveHub_Requirements.md)
+- [ER diagram notes](docs/ER_diagram.md)
 
 ## License
 
-No license has been added yet.
+No license has been added to this repository.
